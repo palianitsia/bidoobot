@@ -8,7 +8,6 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.service import Service
 import time
 import re
-import zipfile
 from datetime import datetime
 import os
 import pyautogui
@@ -150,7 +149,6 @@ class BidooBotApp:
 
         chrome_options = webdriver.ChromeOptions()
         chrome_options.add_experimental_option("mobileEmulation", mobile_emulation)
-        chrome_options.add_extension('timezone_extension.zip')
         chrome_options.add_argument("--headless")
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("--window-size=1920x1080")
@@ -158,7 +156,7 @@ class BidooBotApp:
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
 
-        service = Service("C:\\Users\\Vadym_Mykhailov\\Desktop\\dudu\\chromedriver.exe") # Update with the correct path to chromedriver
+        service = Service("chromedriver.exe") # Update with the correct path to chromedriver
 
         driver = webdriver.Chrome(service=service, options=chrome_options)
 
