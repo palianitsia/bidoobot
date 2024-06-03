@@ -23,7 +23,7 @@ class BidooBotApp:
         self.root.attributes('-topmost', True)
         self.root.attributes('-alpha', 0.96)  # Imposta la trasparenza della finestra principale
 
-        icon_path = os.path.normpath(r"C:\Users\Vadym_Mykhailov\Desktop\dudu\duduico.ico")  # Path to the icon
+        icon_path = os.path.normpath(r"duduico.ico")  # Path to the icon
         try:
             self.root.iconbitmap(icon_path)
         except tk.TclError:
