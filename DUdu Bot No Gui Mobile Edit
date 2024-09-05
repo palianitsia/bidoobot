@@ -1,0 +1,111 @@
+from threading import Event
+from playwright.sync_api import sync_playwright
+import time
+import re
+from datetime import datetime
+
+class BidooBot:
+    def __init__(self, username, password, auction_id):
+        self.username = username
+        self.password = password
+        self.auction_id = auction_id
+        self.stop_event = Event()
+        self.used_bids_count = 0
+
+    def start(self):
+        # Avvia il bot in un nuovo thread
+        self.run_bot()
+
+    def stop(self):
+        # Imposta l'evento di stop
+        self.stop_event.set()
+
+    def run_bot(self):
+        with sync_playwright() as p:
+            # Apri browser con Playwright
+            browser = p.chromium.launch(headless=False)  # Imposta headless=True se non vuoi vedere il browser in azione
+            context = browser.new_context(
+                user_agent="Mozilla/5.0 (Linux; Android 11; SAMSUNG SM-G973U) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/14.2 Chrome/87.0.4280.141 Mobile Safari/537.36",
+                viewport={"width": 360, "height": 640}
+            )
+            page = context.new_page()
+
+            # Vai alla pagina di login
+            page.goto("https://it.bidoo.com")
+
+            # Clicca il bottone di login
+            page.click("#login_btn")
+
+            # Inserisci username/email e password
+            page.fill("#field_email", self.username)
+            page.fill("#password", self.password)
+
+            # Clicca il bottone "ENTRA"
+            page.click('button.btlogin:nth-child(1)')
+
+            # Attendi il caricamento della pagina dopo il login
+            page.wait_for_timeout(2000)
+
+            # Recupera il saldo dopo il login
+            balance = page.query_selector("#divSaldoBidMobile").inner_text()
+            self.update_balance(balance)
+
+            # Vai alla pagina dell'asta
+            auction_url = f"https://it.bidoo.com/auction.php?a={self.auction_id}"
+            page.goto(auction_url)
+
+            # Funzione per monitorare il timer e puntare
+            def monitor_and_bid():
+                last_second = -1
+                while not self.stop_event.is_set():
+                    try:
+                        # Trova il timer
+                        timer_element = page.query_selector(
+                            'body > div.auction-action-info-container.visible-xs.flexible > div.auction-action-info-auction.col-xs-4.text-right > b')
+                        timer_text = timer_element.inner_text()
+
+                        # Estrai i secondi dal timer
+                        if re.match(r'^\d{1,2}:\d{2}$', timer_text):
+                            minutes, seconds = map(int, timer_text.split(":"))
+                            total_seconds = minutes * 60 + seconds
+
+                            # Se il timer è a 1 secondo, clicca il pulsante "PUNTA"
+                            if total_seconds == 1 and last_second != 1:
+                                page.click('a.btn-lg')
+                                self.log_event(f"Puntata eseguita: {datetime.now()}")
+                                self.used_bids_count += 1
+                                self.update_total_bids_label(self.used_bids_count)
+                                last_second = 1
+                            else:
+                                last_second = total_seconds
+                    except Exception as e:
+                        print(f"Errore: {e}")
+                    time.sleep(0.5)
+
+            # Inizia il monitoraggio del timer
+            monitor_and_bid()
+
+            # Chiudi browser al termine
+            browser.close()
+
+    def update_balance(self, balance):
+        print(f"Saldo: {balance}")
+
+    def update_total_bids_label(self, total_bids):
+        print(f"Puntate Totali Usate: {total_bids}")
+
+    def log_event(self, message):
+        log_file = "asta_log.txt"
+        with open(log_file, "a") as file:
+            file.write(f"{message}\n")
+
+
+if __name__ == "__main__":
+    # Inserisci i dati richiesti
+    username = input("Inserisci il tuo username/email: ")
+    password = input("Inserisci la tua password: ")
+    auction_id = input("Inserisci l'ID dell'asta: ")
+
+    # Crea e avvia il bot
+    bot = BidooBot(username, password, auction_id)
+    bot.start()
